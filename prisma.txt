@@ -1,3 +1,13 @@
 npm install prisma --save-dev
 npm install @prisma/client
-npx prisma init --datasource-provider sqlite
+npx prisma init --datasource-provider sqlite 
+
+npx prisma migrate dev --name init
+
+npx prisma db push
+npx prisma generate
+
+після зміни
+npx prisma migrate dev --name назва_міграції
+
+якщо треба оновити поле в бд, то краще оновтии  через sql і змінити в схемі і запустити міграцію

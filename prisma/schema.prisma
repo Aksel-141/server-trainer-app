@@ -3,19 +3,18 @@
 
 generator client {
   provider = "prisma-client-js"
-  output   = "../generated/prisma"
 }
 
 datasource db {
   provider = "sqlite"
-  url      = env("file:./dev.db")
+  url      = env("DATABASE_URL")
 }
 
 model Exercise {
   id          Int      @id @default(autoincrement())
   title       String
   description String
-  images      String //можливо будезберігати в собі об'єкт з переліком url до зображення.
-  video       String?
+  images      String //можливо буде зберігати в собі об'єкт з переліком url до зображення.
+  video       String? //теж буде url
   createdAt   DateTime @default(now())
 }
