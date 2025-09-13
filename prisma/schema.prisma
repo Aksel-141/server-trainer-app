@@ -1,0 +1,21 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("file:./dev.db")
+}
+
+model Exercise {
+  id          Int      @id @default(autoincrement())
+  title       String
+  description String
+  images      String //можливо будезберігати в собі об'єкт з переліком url до зображення.
+  video       String?
+  createdAt   DateTime @default(now())
+}
