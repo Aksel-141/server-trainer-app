@@ -5,6 +5,7 @@ const cors = require("cors");
 const multer = require("multer");
 const { PrismaClient } = require("@prisma/client");
 const sharp = require("sharp");
+const { title } = require("process");
 
 const app = express();
 const prisma = new PrismaClient();
@@ -17,11 +18,6 @@ app.use(express.static(path.join(__dirname, "dist")));
 app.use(express.urlencoded({ extended: true }));
 app.use(cors(corsOptions));
 app.use(express.json());
-
-// Catch-all route to serve React app
-app.get("/*", function (req, res) {
-  res.sendFile(path.join(__dirname, "dist", "index.html"));
-});
 
 // АПІ БЕКЕНДУ
 const multerStorage = multer.diskStorage({
@@ -81,6 +77,54 @@ app.post(
     // console.log(res);
   }
 );
+
+app.get("/api/exercise/all", async (req, res) => {
+  try {
+    const items = await prisma.exercise.findMany();
+    console.log(items);
+
+    const f = items.map((e) => ({
+      id: e.id,
+      title: e.title,
+      description: e.description,
+      images: e.images ? JSON.parse(e.images) : [],
+      video: e.video,
+      createdAt: e.createdAt,
+    }));
+    console.log(items);
+    res.json({ ok: true, data: f });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
+app.delete("/api/exercise/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    await prisma.exercise.delete({
+      where: { id: Number(id) },
+    });
+    console.log(id);
+    res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+
+// Роут для реакту, який хоститься разом з серваком
+app.get("/*", function (req, res) {
+  res.sendFile(path.join(__dirname, "dist", "index.html"));
+});
 
 app.listen(6189, () => {
   console.log("Server is running on port 6189");
