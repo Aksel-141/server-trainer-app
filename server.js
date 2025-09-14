@@ -28,7 +28,6 @@ const multerStorage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, "uploads/"),
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname);
-    // console.log(file.originalname);
 
     cb(null, Date.now() + ext);
   },
@@ -44,9 +43,6 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      // console.log(req.body);
-      // console.log(req.files);
-
       const { title, description } = req.body;
       //Збереження файлів в папку і отримання url
 
@@ -59,16 +55,19 @@ app.post(
           fs.unlinkSync(file.path);
         }
       }
-      // const imagesUrls = req.files.images
-      //   ? req.files.images.map((f) => "/uploads/" + f.filename)
-      //   : [];
+
       const videoUrl = req.files.video
         ? "/uploads/" + req.files.video[0].filename
         : null;
 
-      console.log("Iamge", req.files.images);
-      console.log("Iamge", imagesUrls);
-      console.log("video", videoUrl);
+      await prisma.exercise.create({
+        data: {
+          title: title,
+          description: description,
+          images: JSON.stringify(imagesUrls),
+          video: req.files.video ? videoUrl : null,
+        },
+      });
 
       res.json({ ok: true });
     } catch (error) {
