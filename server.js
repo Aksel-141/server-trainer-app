@@ -39,8 +39,9 @@ app.post(
   ]),
   async (req, res) => {
     try {
-      const { title, description } = req.body;
+      const { title, description, muscles } = req.body;
       //Збереження файлів в папку і отримання url
+      console.log(req.body);
 
       const imagesUrls = [];
       if (req.files.images) {
@@ -62,6 +63,13 @@ app.post(
           description: description,
           images: JSON.stringify(imagesUrls),
           video: req.files.video ? videoUrl : null,
+          muscles: {
+            create: JSON.parse(muscles)?.map((item) => ({
+              muscle: {
+                connect: { name: item },
+              },
+            })),
+          },
         },
       });
 
@@ -80,7 +88,15 @@ app.post(
 
 app.get("/api/exercise/all", async (req, res) => {
   try {
-    const items = await prisma.exercise.findMany();
+    const items = await prisma.exercise.findMany({
+      include: {
+        muscles: {
+          include: {
+            muscle: true, // отримуємо об’єкт Muscle з name
+          },
+        },
+      },
+    });
     console.log(items);
 
     const f = items.map((e) => ({
@@ -89,6 +105,7 @@ app.get("/api/exercise/all", async (req, res) => {
       description: e.description,
       images: e.images ? JSON.parse(e.images) : [],
       video: e.video,
+      muscles: e.muscles.map((em) => em.muscle.name),
       createdAt: e.createdAt,
     }));
     console.log(items);

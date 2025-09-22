@@ -7,11 +7,29 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+//Вправа
 model Exercise {
-  id          Int      @id @default(autoincrement())
-  title       String   @unique
+  id          Int              @id @default(autoincrement())
+  title       String           @unique
   description String
   images      String
   video       String?
-  createdAt   DateTime @default(now())
+  muscles     ExerciseMuscle[]
+  createdAt   DateTime         @default(now())
+}
+
+//М'язи
+model Muscle {
+  id        Int              @id @default(autoincrement())
+  name      String           @unique
+  exercises ExerciseMuscle[]
+}
+
+//Зв'язок Вправа-М'язи
+model ExerciseMuscle {
+  id         Int      @id @default(autoincrement())
+  exerciseId Int
+  muscleId   Int
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  muscle     Muscle   @relation(fields: [muscleId], references: [id])
 }
