@@ -78,11 +78,6 @@ app.post(
       console.error(error);
       res.status(500).json({ error: "Something went wrong" });
     }
-
-    // const data = req.body;
-    // console.log(data);
-
-    // console.log(res);
   }
 );
 
@@ -108,7 +103,6 @@ app.get("/api/exercise/all", async (req, res) => {
       muscles: e.muscles.map((em) => em.muscle.name),
       createdAt: e.createdAt,
     }));
-    console.log(items);
     res.json({ ok: true, data: f });
   } catch (error) {
     console.error(error);
@@ -135,6 +129,103 @@ app.delete("/api/exercise/:id", async (req, res) => {
     });
   }
 });
+
+//Створення рутини
+app.post("/api/routine/create", async (req, res) => {
+  try {
+    const { title, description, routineExercises } = req.body;
+    console.log({ title, description, routineExercises });
+    const routine = await prisma.routine.create({
+      data: {
+        title,
+        description,
+        exercises: {
+          create: routineExercises.map((ex, index) => ({
+            exerciseId: ex.exerciseId,
+            order: index + 1,
+            reps: ex.reps || null,
+            sets: ex.sets || null,
+            duration: ex.duration || null,
+            rest: ex.rest || null,
+          })),
+        },
+      },
+      include: {
+        exercises: { include: { exercise: true } },
+      },
+    });
+    res.json({ ok: true, data: routine });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+
+app.get("/api/routine/all", async (req, res) => {
+  try {
+    const items = await prisma.routine.findMany({
+      include: {
+        exercises: {
+          include: {
+            exercise: {
+              include: {
+                muscles: {
+                  include: {
+                    muscle: true, // отримуємо об’єкт Muscle з name
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    console.log(items);
+    res.json({ ok: true, data: items });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
+app.get("/api/routine/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    console.log(id);
+    const items = await prisma.routine.findUnique({
+      where: { id: Number(id) },
+      include: {
+        exercises: {
+          include: {
+            exercise: {
+              include: {
+                muscles: {
+                  include: {
+                    muscle: true, // отримуємо об’єкт Muscle з name
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    console.log(items);
+    res.json({ ok: true, data: items });
+  } catch (error) {
+    console.log(error);
+
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+app.delete("/api/routine/:id");
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 

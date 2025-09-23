@@ -9,13 +9,14 @@ datasource db {
 
 //Вправа
 model Exercise {
-  id          Int              @id @default(autoincrement())
-  title       String           @unique
+  id          Int               @id @default(autoincrement())
+  title       String            @unique
   description String
   images      String
   video       String?
   muscles     ExerciseMuscle[]
-  createdAt   DateTime         @default(now())
+  routines    RoutineExercise[]
+  createdAt   DateTime          @default(now())
 }
 
 //М'язи
@@ -32,4 +33,26 @@ model ExerciseMuscle {
   muscleId   Int
   exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
   muscle     Muscle   @relation(fields: [muscleId], references: [id])
+}
+
+model Routine {
+  id          Int               @id @default(autoincrement())
+  title       String            @unique
+  description String?
+  exercises   RoutineExercise[]
+  createdAt   DateTime          @default(now())
+}
+
+model RoutineExercise {
+  id         Int  @id @default(autoincrement())
+  routineId  Int
+  exerciseId Int
+  order      Int // порядок виконання вправи в рутині
+  reps       Int? // кількість повторів, якщо це reps
+  sets       Int? // кількість сетів
+  duration   Int? // час у секундах, якщо це time-based
+  rest       Int? // перерва після вправи у секундах
+
+  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise Exercise @relation(fields: [exerciseId], references: [id])
 }
