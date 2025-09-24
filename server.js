@@ -5,7 +5,6 @@ const cors = require("cors");
 const multer = require("multer");
 const { PrismaClient } = require("@prisma/client");
 const sharp = require("sharp");
-const { title } = require("process");
 
 const app = express();
 const prisma = new PrismaClient();
@@ -227,6 +226,27 @@ app.get("/api/routine/:id", async (req, res) => {
 });
 app.delete("/api/routine/:id");
 
+//Статистика тренування
+app.post("/api/statistics/add", async (req, res) => {
+  try {
+    const { workoutTitle, workoutTime, endTime, muscles } = req.body;
+    const data = await prisma.RoutineStatistics.create({
+      data: {
+        workoutTitle: workoutTitle,
+        workoutTime: workoutTime,
+        endTime: endTime,
+        muscles: JSON.stringify(muscles),
+      },
+    });
+
+    res.json({ ok: true, data });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Something went wrong" });
+  }
+});
+app.get("/api/statistics/all");
+
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Роут для реакту, який хоститься разом з серваком
@@ -234,6 +254,6 @@ app.get("/*", function (req, res) {
   res.sendFile(path.join(__dirname, "dist", "index.html"));
 });
 
-app.listen(6189, () => {
+app.listen(6189, "0.0.0.0", () => {
   console.log("Server is running on port 6189");
 });

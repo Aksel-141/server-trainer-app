@@ -56,3 +56,11 @@ model RoutineExercise {
   routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
   exercise Exercise @relation(fields: [exerciseId], references: [id])
 }
+
+model RoutineStatistics {
+  id           Int      @id @default(autoincrement())
+  workoutTitle String
+  workoutTime  Int
+  endTime      DateTime
+  muscles      String
+}
