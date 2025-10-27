@@ -17,9 +17,9 @@ app.use(cors(corsOptions));
 app.use(express.json());
 
 // АПІ БЕКЕНДУ
-
+//Вправи
 app.use("/api/exercise", require("./routes/ExerciseRoutes"));
-//Створення вправи
+app.use("/api/baseData", require("./routes/BaseData"));
 
 //Створення рутини
 app.post("/api/routine/create", async (req, res) => {

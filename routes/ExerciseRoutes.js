@@ -17,18 +17,19 @@ router.get("/all", async (req, res) => {
         },
       },
     });
-    console.log(items);
 
-    const f = items.map((e) => ({
+    console.log(items[1]);
+
+    const result = items.map((e) => ({
       id: e.id,
       title: e.title,
       description: e.description,
       images: e.images ? JSON.parse(e.images) : [],
       video: e.video,
-      muscles: e.muscles.map((em) => em.muscle.name),
+      muscles: e.muscles.map((em) => em.muscle.nameEn),
       createdAt: e.createdAt,
     }));
-    res.json({ ok: true, data: f });
+    res.json({ ok: true, result });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -74,7 +75,7 @@ router.post(
           muscles: {
             create: JSON.parse(muscles)?.map((item) => ({
               muscle: {
-                connect: { name: item },
+                connect: { nameEn: item },
               },
             })),
           },

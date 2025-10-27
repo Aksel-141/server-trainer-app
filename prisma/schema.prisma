@@ -19,20 +19,13 @@ model Exercise {
   createdAt   DateTime          @default(now())
 }
 
-//М'язи
-model Muscle {
-  id        Int              @id @default(autoincrement())
-  name      String           @unique
-  exercises ExerciseMuscle[]
-}
-
 //Зв'язок Вправа-М'язи
 model ExerciseMuscle {
-  id         Int      @id @default(autoincrement())
+  id         Int        @id @default(autoincrement())
   exerciseId Int
   muscleId   Int
-  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  muscle     Muscle   @relation(fields: [muscleId], references: [id])
+  exercise   Exercise   @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  muscle     MuscleList @relation(fields: [muscleId], references: [id])
 }
 
 model Routine {
@@ -63,4 +56,38 @@ model RoutineStatistics {
   workoutTime  Int
   endTime      DateTime
   muscles      String
+}
+
+//Список всіх м'язів
+
+model MuscleList {
+  id            Int              @id @default(autoincrement())
+  nameEn        String           @unique
+  nameUa        String           @unique
+  description   String
+  exercises     ExerciseMuscle[]
+  // muscleListGroup MuscleListGroup[]
+  muscleToGroup MuscleToGroup[]
+}
+
+//Групи м'язів
+model MuscleListGroup {
+  id            Int             @id @default(autoincrement())
+  nameEn        String          @unique
+  nameUa        String          @unique
+  description   String
+  // muscleList    MuscleList[]
+  muscleToGroup MuscleToGroup[]
+}
+
+//Зв'язок між М'язи-група
+
+model MuscleToGroup {
+  id            Int             @id @default(autoincrement())
+  muscleId      Int
+  muscleGroupId Int
+  muscle        MuscleList      @relation(fields: [muscleId], references: [id])
+  muscleGroup   MuscleListGroup @relation(fields: [muscleGroupId], references: [id])
+
+  @@unique([muscleId, muscleGroupId])
 }
