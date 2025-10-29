@@ -18,8 +18,6 @@ router.get("/all", async (req, res) => {
       },
     });
 
-    console.log(items[1]);
-
     const result = items.map((e) => ({
       id: e.id,
       title: e.title,
@@ -32,6 +30,39 @@ router.get("/all", async (req, res) => {
     res.json({ ok: true, result });
   } catch (error) {
     console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
+router.get("/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const item = await prisma.exercise.findUnique({
+      where: { id: Number(id) },
+      include: {
+        muscles: {
+          include: {
+            muscle: true, // отримуємо об’єкт Muscle з name
+          },
+        },
+      },
+    });
+
+    const result = {
+      id: item.id,
+      title: item.title,
+      description: item.description,
+      images: item.images ? JSON.parse(item.images) : [],
+      video: item.video,
+      muscles: item.muscles.map((em) => em.muscle.nameEn),
+      createdAt: item.createdAt,
+    };
+
+    res.json({ ok: true, result });
+  } catch (error) {
     res.status(500).json({
       ok: false,
       error: "Щось пішло не так на сервері",
