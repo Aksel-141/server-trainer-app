@@ -58,6 +58,11 @@ router.get("/:id", async (req, res) => {
       images: item.images ? JSON.parse(item.images) : [],
       video: item.video,
       muscles: item.muscles.map((em) => em.muscle.nameEn),
+      musclesInfo: item.muscles.map((m) => ({
+        id: m.muscle.id,
+        nameUa: m.muscle.nameUa,
+        nameEn: m.muscle.nameEn,
+      })),
       createdAt: item.createdAt,
     };
 
