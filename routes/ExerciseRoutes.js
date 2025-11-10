@@ -51,6 +51,12 @@ router.get("/:id", async (req, res) => {
       },
     });
 
+    if (!item)
+      return res.status(404).json({
+        ok: false,
+        error: "Такого запису не знайдено",
+      });
+
     const result = {
       id: item.id,
       title: item.title,
@@ -89,11 +95,13 @@ router.post(
 
       const imagesUrls = [];
       if (req.files.images) {
+        let i = 0;
         for (const file of req.files.images) {
-          const outputPath = "uploads/" + Date.now() + ".webp";
+          const outputPath = "uploads/" + title + "_image_" + i + ".webp";
           await sharp(file.path).webp({ quality: 80 }).toFile(outputPath);
           imagesUrls.push("/" + outputPath);
           fs.unlinkSync(file.path);
+          i++;
         }
       }
 
@@ -115,6 +123,79 @@ router.post(
               },
             })),
           },
+        },
+      });
+
+      res.json({ ok: true });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: "Something went wrong" });
+    }
+  }
+);
+router.patch(
+  "/:id",
+  uploadMedia.fields([
+    { name: "images", maxCount: 10 },
+    { name: "video", maxCount: 1 },
+  ]),
+  async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { title, description, muscles } = req.body;
+
+      const item = await prisma.exercise.findUnique({
+        where: { id: Number(id) },
+        include: { muscles: true },
+      });
+
+      if (!item)
+        return res.status(404).json({
+          ok: false,
+          error: "Такого запису не знайдено",
+        });
+
+      //Обробка зображень
+      let imagesUrls = item.images ? JSON.parse(item.images) : [];
+      if (req.files.images) {
+        // Додати нові зображення
+        let i = 0;
+        for (const file of req.files.images) {
+          const outputPath = "uploads/" + title + "_image_" + i + ".webp";
+          await sharp(file.path).webp({ quality: 80 }).toFile(outputPath);
+          imagesUrls.push("/" + outputPath);
+          fs.unlinkSync(file.path);
+          i++;
+        }
+      }
+      // Обробка відео
+      let videoUrl = item.video;
+      if (req.files.video) {
+        // Видалити старе відео, якщо є
+        if (videoUrl) {
+          const oldVideoPath = path.join(__dirname, "..", videoUrl);
+          if (fs.existsSync(oldVideoPath)) fs.unlinkSync(oldVideoPath);
+        }
+        videoUrl = "/uploads/" + req.files.video[0].filename;
+      }
+      // Оновлення вправи
+      await prisma.exercise.update({
+        where: { id: Number(id) },
+        data: {
+          title: title || item.title,
+          description: description || item.description,
+          images: JSON.stringify(imagesUrls),
+          video: videoUrl,
+          muscles: muscles
+            ? {
+                deleteMany: {}, // Видалити всі старі зв'язки
+                create: JSON.parse(muscles).map((item) => ({
+                  muscle: {
+                    connect: { nameEn: item },
+                  },
+                })),
+              }
+            : undefined,
         },
       });
 
