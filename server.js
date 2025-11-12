@@ -152,7 +152,103 @@ app.post("/api/statistics", async (req, res) => {
     res.status(500).json({ error: "Something went wrong" });
   }
 });
-app.get("/api/statistics/all");
+
+// Отримати всі тренування
+app.get("/api/statistics/all", async (req, res) => {
+  try {
+    const statistics = await prisma.routineStatistics.findMany({
+      orderBy: {
+        endTime: "desc",
+      },
+    });
+
+    res.json({ ok: true, data: statistics });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
+// Отримати загальну статистику (summary)
+app.get("/api/statistics/summary", async (req, res) => {
+  try {
+    const total = await prisma.routineStatistics.count();
+
+    const allWorkouts = await prisma.routineStatistics.findMany({
+      select: {
+        workoutTime: true,
+      },
+    });
+
+    const totalTime = allWorkouts.reduce(
+      (sum, w) => sum + (w.workoutTime || 0),
+      0
+    );
+
+    const lastWorkout = await prisma.routineStatistics.findFirst({
+      orderBy: {
+        endTime: "desc",
+      },
+    });
+
+    // Статистика за цей тиждень
+    const startOfWeek = new Date();
+    startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    const weekWorkouts = await prisma.routineStatistics.count({
+      where: {
+        endTime: {
+          gte: startOfWeek.toISOString(),
+        },
+      },
+    });
+
+    // М'язи які тренувалися цього тижня
+    const weekMuscles = await prisma.routineStatistics.findMany({
+      where: {
+        endTime: {
+          gte: startOfWeek.toISOString(),
+        },
+      },
+      select: {
+        muscles: true,
+      },
+    });
+
+    const musclesSet = new Set();
+    weekMuscles.forEach((w) => {
+      if (w.muscles) {
+        try {
+          const muscles = JSON.parse(w.muscles);
+          muscles.forEach((m) => musclesSet.add(m));
+        } catch (e) {
+          console.error("Error parsing muscles:", e);
+        }
+      }
+    });
+
+    res.json({
+      ok: true,
+      data: {
+        totalWorkouts: total,
+        totalTime: totalTime,
+        lastWorkout: lastWorkout,
+        weekWorkouts: weekWorkouts,
+        weekMuscles: Array.from(musclesSet),
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
 
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
