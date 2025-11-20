@@ -133,36 +133,87 @@ app.delete("/api/routine/:id", async (req, res) => {
   }
 });
 
-//Статистика тренування
-app.post("/api/statistics", async (req, res) => {
+// Створення тренування
+app.post("/api/workout", async (req, res) => {
   try {
-    const { workoutTitle, workoutTime, endTime, muscles } = req.body;
-    const data = await prisma.RoutineStatistics.create({
+    const {
+      routineId,
+      title,
+      startTime,
+      endTime,
+      totalTime,
+      exercises,
+      muscles,
+    } = req.body;
+
+    const workout = await prisma.workout.create({
       data: {
-        workoutTitle: workoutTitle,
-        workoutTime: workoutTime,
-        endTime: endTime,
-        muscles: JSON.stringify(muscles),
+        routineId: routineId || null,
+        title,
+        startTime: new Date(startTime),
+        endTime: new Date(endTime),
+        totalTime,
+        exercises: {
+          create: exercises.map((ex, index) => ({
+            exerciseId: ex.exerciseId,
+            order: index + 1,
+            sets: {
+              create: ex.sets.map((set) => ({
+                setNumber: set.setNumber,
+                reps: set.reps || null,
+                duration: set.duration || null,
+                weight: set.weight || null,
+                completedAt: new Date(set.completedAt),
+              })),
+            },
+          })),
+        },
+        muscles: {
+          create: muscles.map((muscleId) => ({
+            muscleId,
+          })),
+        },
+      },
+      include: {
+        exercises: {
+          include: {
+            exercise: true,
+            sets: true,
+          },
+        },
+        muscles: {
+          include: {
+            muscle: true,
+          },
+        },
       },
     });
 
-    res.json({ ok: true, data });
+    res.json({ ok: true, data: workout });
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Something went wrong" });
+    console.error(error);
+    res.status(500).json({ ok: false, error: "Something went wrong" });
   }
 });
 
 // Отримати всі тренування
-app.get("/api/statistics/all", async (req, res) => {
+app.get("/api/workout", async (req, res) => {
   try {
-    const statistics = await prisma.routineStatistics.findMany({
+    const workouts = await prisma.workout.findMany({
       orderBy: {
         endTime: "desc",
       },
+      include: {
+        routine: true,
+        muscles: {
+          include: {
+            muscle: true,
+          },
+        },
+      },
     });
 
-    res.json({ ok: true, data: statistics });
+    res.json({ ok: true, data: workouts });
   } catch (error) {
     console.error(error);
     res.status(500).json({
@@ -173,24 +224,29 @@ app.get("/api/statistics/all", async (req, res) => {
 });
 
 // Отримати загальну статистику (summary)
-app.get("/api/statistics/summary", async (req, res) => {
+app.get("/api/workout/summary", async (req, res) => {
   try {
-    const total = await prisma.routineStatistics.count();
+    const total = await prisma.workout.count();
 
-    const allWorkouts = await prisma.routineStatistics.findMany({
+    const allWorkouts = await prisma.workout.findMany({
       select: {
-        workoutTime: true,
+        totalTime: true,
       },
     });
 
     const totalTime = allWorkouts.reduce(
-      (sum, w) => sum + (w.workoutTime || 0),
+      (sum, w) => sum + (w.totalTime || 0),
       0
     );
 
-    const lastWorkout = await prisma.routineStatistics.findFirst({
+    const lastWorkout = await prisma.workout.findFirst({
       orderBy: {
         endTime: "desc",
+      },
+      select: {
+        title: true,
+        endTime: true,
+        totalTime: true,
       },
     });
 
@@ -199,7 +255,7 @@ app.get("/api/statistics/summary", async (req, res) => {
     startOfWeek.setDate(startOfWeek.getDate() - startOfWeek.getDay() + 1);
     startOfWeek.setHours(0, 0, 0, 0);
 
-    const weekWorkouts = await prisma.routineStatistics.count({
+    const weekWorkouts = await prisma.workout.count({
       where: {
         endTime: {
           gte: startOfWeek.toISOString(),
@@ -208,37 +264,36 @@ app.get("/api/statistics/summary", async (req, res) => {
     });
 
     // М'язи які тренувалися цього тижня
-    const weekMuscles = await prisma.routineStatistics.findMany({
+    const weekMusclesData = await prisma.workoutMuscle.findMany({
       where: {
-        endTime: {
-          gte: startOfWeek.toISOString(),
+        workout: {
+          endTime: {
+            gte: startOfWeek.toISOString(),
+          },
         },
       },
-      select: {
-        muscles: true,
+      include: {
+        muscle: true,
       },
+      distinct: ["muscleId"],
     });
 
-    const musclesSet = new Set();
-    weekMuscles.forEach((w) => {
-      if (w.muscles) {
-        try {
-          const muscles = JSON.parse(w.muscles);
-          muscles.forEach((m) => musclesSet.add(m));
-        } catch (e) {
-          console.error("Error parsing muscles:", e);
-        }
-      }
-    });
+    const weekMuscles = weekMusclesData.map((wm) => wm.muscle.nameEn);
 
     res.json({
       ok: true,
       data: {
         totalWorkouts: total,
         totalTime: totalTime,
-        lastWorkout: lastWorkout,
+        lastWorkout: lastWorkout
+          ? {
+              workoutTitle: lastWorkout.title,
+              endTime: lastWorkout.endTime,
+              workoutTime: lastWorkout.totalTime,
+            }
+          : null,
         weekWorkouts: weekWorkouts,
-        weekMuscles: Array.from(musclesSet),
+        weekMuscles: weekMuscles,
       },
     });
   } catch (error) {

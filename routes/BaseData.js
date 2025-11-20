@@ -3,9 +3,9 @@ const router = require("express").Router();
 
 router.get("/muscleByGroup", async (req, res) => {
   try {
-    const items = await prisma.muscleListGroup.findMany({
+    const items = await prisma.muscleGroup.findMany({
       include: {
-        muscleToGroup: {
+        muscles: {
           include: {
             muscle: true,
           },
@@ -18,7 +18,7 @@ router.get("/muscleByGroup", async (req, res) => {
       nameEn: g.nameEn,
       nameUa: g.nameUa,
       description: g.description,
-      muscles: (g.muscleToGroup || []).map((mt) => ({
+      muscles: (g.muscles || []).map((mt) => ({
         id: mt.muscle.id,
         nameEn: mt.muscle.nameEn,
         nameUa: mt.muscle.nameUa,
@@ -26,7 +26,24 @@ router.get("/muscleByGroup", async (req, res) => {
       })),
     }));
 
-    res.json({ ok: true, result });
+    res.json({ ok: true, result: result || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
+// Отримати всі м'язи без групування
+router.get("/muscles", async (req, res) => {
+  try {
+    const muscles = await prisma.muscle.findMany({
+      orderBy: { nameUa: "asc" },
+    });
+
+    res.json({ ok: true, result: muscles || [] });
   } catch (error) {
     console.error(error);
     res.status(500).json({

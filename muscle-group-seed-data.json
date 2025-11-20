@@ -1,0 +1,38 @@
+[
+  {
+    "nameEn": "legs",
+    "nameUa": "ноги",
+    "description": "М'язи нижніх кінцівок",
+    "muscles": ["calves", "quads", "hamstrings", "glutes"]
+  },
+  {
+    "nameEn": "core",
+    "nameUa": "корпус",
+    "description": "М'язи кору та живота",
+    "muscles": ["abdominals", "obliques", "lowerback"]
+  },
+  {
+    "nameEn": "back",
+    "nameUa": "спина",
+    "description": "М'язи спини",
+    "muscles": ["lats", "traps", "traps-middle", "lowerback"]
+  },
+  {
+    "nameEn": "chest",
+    "nameUa": "груди",
+    "description": "Грудні м'язи",
+    "muscles": ["chest"]
+  },
+  {
+    "nameEn": "arms",
+    "nameUa": "руки",
+    "description": "М'язи верхніх кінцівок",
+    "muscles": ["biceps", "triceps", "forearms"]
+  },
+  {
+    "nameEn": "shoulders",
+    "nameUa": "плечі",
+    "description": "Дельтоподібні м'язи",
+    "muscles": ["front-shoulders", "rear-shoulders"]
+  }
+]

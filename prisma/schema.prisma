@@ -7,87 +7,136 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-//Вправа
+// Вправа
 model Exercise {
-  id          Int               @id @default(autoincrement())
-  title       String            @unique
-  description String
-  images      String
-  video       String?
-  muscles     ExerciseMuscle[]
-  routines    RoutineExercise[]
-  createdAt   DateTime          @default(now())
+  id              Int               @id @default(autoincrement())
+  title           String            @unique
+  description     String
+  images          String // JSON array of image paths
+  video           String?
+  muscles         ExerciseMuscle[]
+  routines        RoutineExercise[]
+  workoutExercise WorkoutExercise[]
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
 }
 
-//Зв'язок Вправа-М'язи
+// Зв'язок Вправа-М'язи (Many-to-Many)
 model ExerciseMuscle {
-  id         Int        @id @default(autoincrement())
   exerciseId Int
   muscleId   Int
-  exercise   Exercise   @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
-  muscle     MuscleList @relation(fields: [muscleId], references: [id])
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  muscle     Muscle   @relation(fields: [muscleId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, muscleId])
 }
 
+// Рутина (план тренування)
 model Routine {
   id          Int               @id @default(autoincrement())
   title       String            @unique
   description String?
   exercises   RoutineExercise[]
+  workouts    Workout[]
   createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
 }
 
+// Вправи в рутині
 model RoutineExercise {
-  id         Int  @id @default(autoincrement())
+  id         Int      @id @default(autoincrement())
   routineId  Int
   exerciseId Int
-  order      Int // порядок виконання вправи в рутині
-  reps       Int? // кількість повторів, якщо це reps
-  sets       Int? // кількість сетів
-  duration   Int? // час у секундах, якщо це time-based
-  rest       Int? // перерва після вправи у секундах
+  order      Int
+  reps       Int?
+  sets       Int?
+  duration   Int? // seconds
+  rest       Int? // seconds
+  routine    Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  exercise   Exercise @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
 
-  routine  Routine  @relation(fields: [routineId], references: [id], onDelete: Cascade)
-  exercise Exercise @relation(fields: [exerciseId], references: [id])
+  @@unique([routineId, exerciseId, order])
 }
 
-model RoutineStatistics {
-  id           Int      @id @default(autoincrement())
-  workoutTitle String
-  workoutTime  Int
-  endTime      DateTime
-  muscles      String
+// Тренування (фактично виконана рутина)
+model Workout {
+  id        Int               @id @default(autoincrement())
+  routineId Int?
+  title     String
+  startTime DateTime
+  endTime   DateTime
+  totalTime Int // seconds
+  routine   Routine?          @relation(fields: [routineId], references: [id], onDelete: SetNull)
+  exercises WorkoutExercise[]
+  muscles   WorkoutMuscle[]
+  createdAt DateTime          @default(now())
+
+  @@index([endTime])
 }
 
-//Список всіх м'язів
+// Вправи виконані в тренуванні
+model WorkoutExercise {
+  id         Int          @id @default(autoincrement())
+  workoutId  Int
+  exerciseId Int
+  order      Int
+  workout    Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exercise   Exercise     @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  sets       WorkoutSet[]
 
-model MuscleList {
-  id            Int              @id @default(autoincrement())
-  nameEn        String           @unique
-  nameUa        String           @unique
-  description   String
-  exercises     ExerciseMuscle[]
-  // muscleListGroup MuscleListGroup[]
-  muscleToGroup MuscleToGroup[]
+  @@index([workoutId])
 }
 
-//Групи м'язів
-model MuscleListGroup {
-  id            Int             @id @default(autoincrement())
-  nameEn        String          @unique
-  nameUa        String          @unique
-  description   String
-  // muscleList    MuscleList[]
-  muscleToGroup MuscleToGroup[]
+// Сети виконані в вправі
+model WorkoutSet {
+  id                Int             @id @default(autoincrement())
+  workoutExerciseId Int
+  setNumber         Int
+  reps              Int?
+  duration          Int? // seconds
+  weight            Float? // for future expansion
+  completedAt       DateTime
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+
+  @@index([workoutExerciseId])
 }
 
-//Зв'язок між М'язи-група
+// М'язи задіяні в тренуванні (Many-to-Many)
+model WorkoutMuscle {
+  workoutId Int
+  muscleId  Int
+  workout   Workout @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  muscle    Muscle  @relation(fields: [muscleId], references: [id], onDelete: Cascade)
 
+  @@id([workoutId, muscleId])
+}
+
+// Список всіх м'язів
+model Muscle {
+  id          Int              @id @default(autoincrement())
+  nameEn      String           @unique
+  nameUa      String           @unique
+  description String
+  exercises   ExerciseMuscle[]
+  groups      MuscleToGroup[]
+  workouts    WorkoutMuscle[]
+}
+
+// Групи м'язів
+model MuscleGroup {
+  id          Int             @id @default(autoincrement())
+  nameEn      String          @unique
+  nameUa      String          @unique
+  description String
+  muscles     MuscleToGroup[]
+}
+
+// Зв'язок М'язи-Група (Many-to-Many)
 model MuscleToGroup {
-  id            Int             @id @default(autoincrement())
-  muscleId      Int
-  muscleGroupId Int
-  muscle        MuscleList      @relation(fields: [muscleId], references: [id])
-  muscleGroup   MuscleListGroup @relation(fields: [muscleGroupId], references: [id])
+  muscleId Int
+  groupId  Int
+  muscle   Muscle      @relation(fields: [muscleId], references: [id], onDelete: Cascade)
+  group    MuscleGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
 
-  @@unique([muscleId, muscleGroupId])
+  @@id([muscleId, groupId])
 }
