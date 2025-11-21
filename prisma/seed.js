@@ -4,6 +4,15 @@ const muscleData = require("../muscle-seed-data.json");
 const muscleGroupData = require("../muscle-group-seed-data.json");
 
 async function main() {
+  // Перевіряємо чи вже є базові дані
+  const existingMuscles = await prisma.muscle.count();
+  const existingGroups = await prisma.muscleGroup.count();
+
+  if (existingMuscles > 0 && existingGroups > 0) {
+    console.log("✓ Базові дані вже існують, seed пропущено");
+    return;
+  }
+
   console.log("Seeding muscles...");
 
   for (const muscle of muscleData) {
