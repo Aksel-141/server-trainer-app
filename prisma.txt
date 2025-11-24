@@ -11,3 +11,13 @@ npx prisma generate
 npx prisma migrate dev --name назва_міграції
 
 якщо треба оновити поле в бд, то краще оновтии  через sql і змінити в схемі і запустити міграцію
+
+
+Короче, схема:
+Dev:
+migrate dev --create-only
+git push
+
+Prod/Release:
+migrate resolve --applied <назва_міграції>
+migrate deploy

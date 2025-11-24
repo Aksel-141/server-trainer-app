@@ -59,10 +59,23 @@ model Routine {
   id          Int               @id @default(autoincrement())
   title       String            @unique
   description String?
+  categoryId  Int?
+  category    RoutineCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   exercises   RoutineExercise[]
   workouts    Workout[]
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
+}
+
+// Категорії програм тренувань
+model RoutineCategory {
+  id          Int       @id @default(autoincrement())
+  nameEn      String    @unique
+  nameUa      String    @unique
+  description String
+  icon        String? // emoji або назва іконки
+  color       String? // hex колір для UI
+  routines    Routine[]
 }
 
 // Вправи в рутині

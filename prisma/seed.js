@@ -2,13 +2,15 @@ const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 const muscleData = require("../muscle-seed-data.json");
 const muscleGroupData = require("../muscle-group-seed-data.json");
+const routineCategoryData = require("../routine-category-seed-data.json");
 
 async function main() {
   // Перевіряємо чи вже є базові дані
   const existingMuscles = await prisma.muscle.count();
   const existingGroups = await prisma.muscleGroup.count();
+  const existingCategories = await prisma.routineCategory.count();
 
-  if (existingMuscles > 0 && existingGroups > 0) {
+  if (existingMuscles > 0 && existingGroups > 0 && existingCategories > 0) {
     console.log("✓ Базові дані вже існують, seed пропущено");
     return;
   }
@@ -79,6 +81,33 @@ async function main() {
 
   console.log(
     `\n✅ Seeded ${muscleGroupData.length} muscle groups successfully!`
+  );
+
+  // Seed категорій програм тренувань
+  console.log("\nSeeding routine categories...");
+
+  for (const category of routineCategoryData) {
+    await prisma.routineCategory.upsert({
+      where: { nameEn: category.nameEn },
+      update: {
+        nameUa: category.nameUa,
+        description: category.description,
+        icon: category.icon,
+        color: category.color,
+      },
+      create: {
+        nameEn: category.nameEn,
+        nameUa: category.nameUa,
+        description: category.description,
+        icon: category.icon,
+        color: category.color,
+      },
+    });
+    console.log(`✓ ${category.nameEn} (${category.nameUa}) ${category.icon}`);
+  }
+
+  console.log(
+    `\n✅ Seeded ${routineCategoryData.length} routine categories successfully!`
   );
 }
 

@@ -53,4 +53,21 @@ router.get("/muscles", async (req, res) => {
   }
 });
 
+// Отримати всі категорії програм тренувань
+router.get("/routineCategories", async (req, res) => {
+  try {
+    const categories = await prisma.routineCategory.findMany({
+      orderBy: { nameUa: "asc" },
+    });
+
+    res.json({ ok: true, result: categories || [] });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
 module.exports = router;
