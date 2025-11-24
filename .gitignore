@@ -5,3 +5,5 @@ node_modules
 /uploads
 /generated/prisma
 /database
+start.bat
+update.bat

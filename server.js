@@ -57,12 +57,16 @@ app.get("/api/routine", async (req, res) => {
     const items = await prisma.routine.findMany({
       include: {
         exercises: {
+          orderBy: {
+            order: 'asc',
+          },
           include: {
             exercise: {
               include: {
+                images: true,
                 muscles: {
                   include: {
-                    muscle: true, // отримуємо об’єкт Muscle з name
+                    muscle: true, // отримуємо об'єкт Muscle з name
                   },
                 },
               },
@@ -91,12 +95,16 @@ app.get("/api/routine/:id", async (req, res) => {
       where: { id: Number(id) },
       include: {
         exercises: {
+          orderBy: {
+            order: 'asc',
+          },
           include: {
             exercise: {
               include: {
+                images: true,
                 muscles: {
                   include: {
-                    muscle: true, // отримуємо об’єкт Muscle з name
+                    muscle: true, // отримуємо об'єкт Muscle з name
                   },
                 },
               },
