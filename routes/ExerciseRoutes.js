@@ -43,6 +43,193 @@ router.get("/all", async (req, res) => {
   }
 });
 
+// Експорт вправ
+router.get("/export", async (req, res) => {
+  try {
+    const items = await prisma.exercise.findMany({
+      include: {
+        muscles: {
+          include: {
+            muscle: true,
+          },
+        },
+        images: {
+          orderBy: {
+            order: "asc",
+          },
+        },
+        videos: true,
+      },
+    });
+
+    const exportData = items.map((e) => ({
+      title: e.title,
+      description: e.description || "",
+      muscles: e.muscles.map((em) => em.muscle.nameEn),
+      images: e.images.map((img) => ({
+        path: img.path,
+        order: img.order,
+      })),
+      video: e.videos.length > 0 ? e.videos[0].path : null,
+      createdAt: e.createdAt,
+    }));
+
+    res.json({
+      ok: true,
+      version: "1.0",
+      exportDate: new Date().toISOString(),
+      count: exportData.length,
+      exercises: exportData,
+    });
+  } catch (error) {
+    console.error("Export error:", error);
+    res.status(500).json({
+      ok: false,
+      error: "Помилка при експорті вправ",
+    });
+  }
+});
+
+// Імпорт вправ
+router.post("/import", async (req, res) => {
+  try {
+    const { exercises } = req.body;
+
+    if (!Array.isArray(exercises)) {
+      return res.status(400).json({
+        ok: false,
+        error: "Невірний формат даних",
+      });
+    }
+
+    const results = {
+      success: 0,
+      skipped: 0,
+      errors: 0,
+      details: [],
+    };
+
+    for (const exerciseData of exercises) {
+      try {
+        // Перевірка обов'язкових полів з безпечними значеннями за замовчуванням
+        const title = exerciseData.title?.trim();
+        if (!title) {
+          results.skipped++;
+          results.details.push({
+            title: "Без назви",
+            status: "skipped",
+            reason: "Відсутня назва вправи",
+          });
+          continue;
+        }
+
+        // Перевірка чи вправа вже існує
+        const existing = await prisma.exercise.findUnique({
+          where: { title: title },
+        });
+
+        if (existing) {
+          results.skipped++;
+          results.details.push({
+            title: title,
+            status: "skipped",
+            reason: "Вправа з такою назвою вже існує",
+          });
+          continue;
+        }
+
+        // Безпечна обробка м'язів
+        const muscles = Array.isArray(exerciseData.muscles)
+          ? exerciseData.muscles.filter(
+              (m) => typeof m === "string" && m.trim()
+            )
+          : [];
+
+        // Перевірка чи всі м'язи існують в БД
+        const validMuscles = [];
+        for (const muscleName of muscles) {
+          const muscle = await prisma.muscle.findUnique({
+            where: { nameEn: muscleName },
+          });
+          if (muscle) {
+            validMuscles.push(muscleName);
+          }
+        }
+
+        // Створення вправи
+        const exercise = await prisma.exercise.create({
+          data: {
+            title: title,
+            description: exerciseData.description?.trim() || "",
+            muscles: {
+              create: validMuscles.map((muscleName) => ({
+                muscle: {
+                  connect: { nameEn: muscleName },
+                },
+              })),
+            },
+          },
+        });
+
+        // Безпечна обробка зображень (без файлів, тільки посилання)
+        if (Array.isArray(exerciseData.images)) {
+          for (let i = 0; i < exerciseData.images.length; i++) {
+            const img = exerciseData.images[i];
+            if (img && typeof img.path === "string" && img.path.trim()) {
+              await prisma.exerciseImage.create({
+                data: {
+                  exerciseId: exercise.id,
+                  path: img.path,
+                  order: typeof img.order === "number" ? img.order : i,
+                },
+              });
+            }
+          }
+        }
+
+        // Безпечна обробка відео
+        if (
+          exerciseData.video &&
+          typeof exerciseData.video === "string" &&
+          exerciseData.video.trim()
+        ) {
+          await prisma.exerciseVideo.create({
+            data: {
+              exerciseId: exercise.id,
+              path: exerciseData.video,
+            },
+          });
+        }
+
+        results.success++;
+        results.details.push({
+          title: title,
+          status: "success",
+          reason: "Успішно імпортовано",
+        });
+      } catch (error) {
+        results.errors++;
+        results.details.push({
+          title: exerciseData.title || "Невідома вправа",
+          status: "error",
+          reason: error.message,
+        });
+      }
+    }
+
+    res.json({
+      ok: true,
+      results: results,
+    });
+  } catch (error) {
+    console.error("Import error:", error);
+    res.status(500).json({
+      ok: false,
+      error: "Помилка при імпорті вправ",
+    });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
