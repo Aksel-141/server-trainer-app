@@ -58,7 +58,7 @@ app.get("/api/routine", async (req, res) => {
       include: {
         exercises: {
           orderBy: {
-            order: 'asc',
+            order: "asc",
           },
           include: {
             exercise: {
@@ -96,7 +96,7 @@ app.get("/api/routine/:id", async (req, res) => {
       include: {
         exercises: {
           orderBy: {
-            order: 'asc',
+            order: "asc",
           },
           include: {
             exercise: {
