@@ -56,26 +56,35 @@ model ExerciseMuscle {
 
 // Рутина (план тренування)
 model Routine {
-  id          Int               @id @default(autoincrement())
-  title       String            @unique
+  id          Int                 @id @default(autoincrement())
+  title       String              @unique
   description String?
-  categoryId  Int?
-  category    RoutineCategory?  @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  categories  RoutineToCategory[]
   exercises   RoutineExercise[]
   workouts    Workout[]
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
 }
 
 // Категорії програм тренувань
 model RoutineCategory {
-  id          Int       @id @default(autoincrement())
-  nameEn      String    @unique
-  nameUa      String    @unique
+  id          Int                 @id @default(autoincrement())
+  nameEn      String              @unique
+  nameUa      String              @unique
   description String
   icon        String? // emoji або назва іконки
   color       String? // hex колір для UI
-  routines    Routine[]
+  routines    RoutineToCategory[]
+}
+
+// Зв'язок Рутина-Категорії (Many-to-Many)
+model RoutineToCategory {
+  routineId  Int
+  categoryId Int
+  routine    Routine         @relation(fields: [routineId], references: [id], onDelete: Cascade)
+  category   RoutineCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@id([routineId, categoryId])
 }
 
 // Вправи в рутині

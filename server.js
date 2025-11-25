@@ -24,13 +24,17 @@ app.use("/api/baseData", require("./routes/BaseData"));
 //Створення рутини
 app.post("/api/routine/create", async (req, res) => {
   try {
-    const { title, description, categoryId, routineExercises } = req.body;
-    console.log({ title, description, categoryId, routineExercises });
+    const { title, description, categoryIds, routineExercises } = req.body;
+    console.log({ title, description, categoryIds, routineExercises });
     const routine = await prisma.routine.create({
       data: {
         title,
         description,
-        categoryId: categoryId || null,
+        categories: {
+          create: (categoryIds || []).map((categoryId) => ({
+            categoryId,
+          })),
+        },
         exercises: {
           create: routineExercises.map((ex, index) => ({
             exerciseId: ex.exerciseId,
@@ -44,7 +48,7 @@ app.post("/api/routine/create", async (req, res) => {
       },
       include: {
         exercises: { include: { exercise: true } },
-        category: true,
+        categories: { include: { category: true } },
       },
     });
     res.json({ ok: true, data: routine });
@@ -58,7 +62,7 @@ app.get("/api/routine", async (req, res) => {
   try {
     const items = await prisma.routine.findMany({
       include: {
-        category: true,
+        categories: { include: { category: true } },
         exercises: {
           orderBy: {
             order: "asc",
@@ -97,7 +101,7 @@ app.get("/api/routine/:id", async (req, res) => {
     const items = await prisma.routine.findUnique({
       where: { id: Number(id) },
       include: {
-        category: true,
+        categories: { include: { category: true } },
         exercises: {
           orderBy: {
             order: "asc",
