@@ -70,7 +70,12 @@ app.get("/api/routine", async (req, res) => {
           include: {
             exercise: {
               include: {
-                images: true,
+                images: {
+                  orderBy: {
+                    order: "asc",
+                  },
+                },
+                videos: true,
                 muscles: {
                   include: {
                     muscle: true, // отримуємо об'єкт Muscle з name
@@ -109,7 +114,12 @@ app.get("/api/routine/:id", async (req, res) => {
           include: {
             exercise: {
               include: {
-                images: true,
+                images: {
+                  orderBy: {
+                    order: "asc",
+                  },
+                },
+                videos: true,
                 muscles: {
                   include: {
                     muscle: true, // отримуємо об'єкт Muscle з name
