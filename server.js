@@ -159,6 +159,59 @@ app.delete("/api/routine/:id", async (req, res) => {
   }
 });
 
+// Оновлення рутини
+app.patch("/api/routine/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { title, description, categoryIds, routineExercises } = req.body;
+
+    // Спочатку видаляємо старі зв'язки
+    await prisma.routineExercise.deleteMany({
+      where: { routineId: Number(id) },
+    });
+
+    await prisma.routineToCategory.deleteMany({
+      where: { routineId: Number(id) },
+    });
+
+    // Оновлюємо рутину та додаємо нові зв'язки
+    const routine = await prisma.routine.update({
+      where: { id: Number(id) },
+      data: {
+        title,
+        description,
+        categories: {
+          create: (categoryIds || []).map((categoryId) => ({
+            categoryId,
+          })),
+        },
+        exercises: {
+          create: routineExercises.map((ex, index) => ({
+            exerciseId: ex.exerciseId,
+            order: index + 1,
+            reps: ex.reps || null,
+            sets: ex.sets || null,
+            duration: ex.duration || null,
+            rest: ex.rest || null,
+          })),
+        },
+      },
+      include: {
+        exercises: { include: { exercise: true } },
+        categories: { include: { category: true } },
+      },
+    });
+
+    res.json({ ok: true, data: routine });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      ok: false,
+      error: "Щось пішло не так на сервері",
+    });
+  }
+});
+
 // Створення тренування
 app.post("/api/workout", async (req, res) => {
   try {
