@@ -1,11 +1,19 @@
-const prisma = require("../prismaInit");
-const router = require("express").Router();
-const sharp = require("sharp");
+// const prisma = require("../prismaInit");
+// const router = require("express").Router();
+// const sharp = require("sharp");
+import prisma from "../prismaInit.js";
 
-const path = require("path");
-const fs = require("fs");
-const { uploadMedia } = require("../uploadMedia");
+import sharp from "sharp";
+import path from "path";
+import fs from "fs";
 
+// const path = require("path");
+// const fs = require("fs");
+// const { uploadMedia } = require("../uploadMedia");
+import { uploadMedia } from "../uploadMedia.js";
+
+import { Router } from "express";
+const router = Router();
 router.get("/all", async (req, res) => {
   try {
     const items = await prisma.exercise.findMany({
@@ -517,4 +525,5 @@ router.delete("/:exerciseId/image/:imageId", async (req, res) => {
   }
 });
 
-module.exports = router;
+// module.exports = router;
+export default router;

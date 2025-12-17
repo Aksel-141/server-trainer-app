@@ -1,12 +1,13 @@
-const express = require("express");
-const path = require("path");
-const fs = require("fs");
-const cors = require("cors");
-
-const prisma = require("./prismaInit");
+import express from "express";
+import path from "path";
+import fs from "fs";
+import cors from "cors";
+import prisma from "./prismaInit.js";
+import { fileURLToPath } from "url";
 
 const app = express();
-
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 const corsOptions = {
   origin: ["http://localhost:5173"],
 };
@@ -18,8 +19,10 @@ app.use(express.json());
 
 // АПІ БЕКЕНДУ
 //Вправи
-app.use("/api/exercise", require("./routes/ExerciseRoutes"));
-app.use("/api/baseData", require("./routes/BaseData"));
+import exerciseRoutes from "./routes/ExerciseRoutes.js";
+app.use("/api/exercise", exerciseRoutes);
+import baseDataRoutes from "./routes/BaseData.js";
+app.use("/api/baseData", baseDataRoutes);
 
 //Створення рутини
 app.post("/api/routine/create", async (req, res) => {

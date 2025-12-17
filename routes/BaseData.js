@@ -1,5 +1,6 @@
-const prisma = require("../prismaInit");
-const router = require("express").Router();
+import prisma from "../prismaInit.js";
+import { Router } from "express";
+const router = Router();
 
 router.get("/muscleByGroup", async (req, res) => {
   try {
@@ -70,4 +71,5 @@ router.get("/routineCategories", async (req, res) => {
   }
 });
 
-module.exports = router;
+// module.exports = router;
+export default router;
