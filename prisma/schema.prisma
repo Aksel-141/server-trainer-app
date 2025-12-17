@@ -6,13 +6,24 @@ datasource db {
   provider = "sqlite"
 }
 
+// Визначаємо перелік типів вправ
+enum ExerciseType {
+  endurance
+  strength
+  balance
+  flexibility
+}
+
 // Вправа
 model Exercise {
-  id              Int               @id @default(autoincrement())
-  title           String            @unique
-  description     String
-  images          ExerciseImage[]
-  videos          ExerciseVideo[]
+  id          Int    @id @default(autoincrement())
+  title       String @unique
+  description String
+
+  images ExerciseImage[]
+  videos ExerciseVideo[]
+
+  type            ExerciseType      @default(strength)
   muscles         ExerciseMuscle[]
   routines        RoutineExercise[]
   workoutExercise WorkoutExercise[]
