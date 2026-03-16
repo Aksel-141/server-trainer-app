@@ -1,34 +1,14 @@
-import { PrismaClient } from "@prisma/client";
-import { PrismaBetterSqlite3 } from "@prisma/adapter-better-sqlite3";
-import path from "path";
-import os from "os";
-import fs from "fs";
+import { PrismaClient } from "@prisma/client/index.js";
+import { PrismaPg } from "@prisma/adapter-pg";
+import pg from "pg";
 
-//Формуємо шлях до файлу БД в папці документи.
-const documentFolderPath = path.join(os.homedir(), "Documents", "TrainApp");
-const dbFilePath = path.join(
-  documentFolderPath,
-  process.env.DATABASE_NAME || "dev.db"
-);
+const { Pool } = pg;
 
-if (!fs.existsSync(documentFolderPath)) {
-  fs.mkdirSync(documentFolderPath, { recursive: true });
-  console.log("📁папку", documentFolderPath, dbFilePath);
-}
+const connectionString = process.env.DATABASE_URL;
+const pool = new Pool({ connectionString });
+const adapter = new PrismaPg(pool);
 
-const dbPath = `file:${dbFilePath}`;
-process.env.DATABASE_URL = dbPath;
-// const dbPath =
-//   process.env.DATABASE_URL?.replace("file:", "") || "./database/dev.db";
-
-const adapter = new PrismaBetterSqlite3({
-  url: dbPath,
-});
-
-const prisma = new PrismaClient({ adapter });
+let prisma;
+prisma = new PrismaClient({ adapter }); // бере DATABASE_URL з env (PostgreSQL)
 
 export default prisma;
-
-// Стара версія prisma v6
-// const prisma = new PrismaClient();
-// module.exports = prisma;

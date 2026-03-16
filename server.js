@@ -318,7 +318,7 @@ app.get("/api/workout/summary", async (req, res) => {
 
     const totalTime = allWorkouts.reduce(
       (sum, w) => sum + (w.totalTime || 0),
-      0
+      0,
     );
 
     const lastWorkout = await prisma.workout.findFirst({

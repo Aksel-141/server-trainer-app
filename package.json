@@ -16,17 +16,24 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@libsql/client": "^0.15.15",
     "@prisma/adapter-better-sqlite3": "^7.1.0",
+    "@prisma/adapter-pg": "^7.5.0",
+    "@prisma/client": "^7.5.0",
     "@prisma/config": "^7.1.0",
     "better-sqlite3": "^12.5.0",
     "cors": "^2.8.5",
+    "dotenv": "^17.3.1",
+    "drizzle-orm": "^0.45.1",
     "express": "^4.21.2",
     "multer": "^2.0.2",
+    "pg": "^8.20.0",
     "sharp": "^0.34.3"
   },
   "devDependencies": {
-    "@prisma/client": "^7.1.0",
+    "drizzle-kit": "^0.31.8",
     "nodemon": "^3.1.11",
-    "prisma": "^7.1.0"
+    "prisma": "^7.5.0",
+    "tsx": "^4.21.0"
   }
 }
