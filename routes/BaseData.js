@@ -2,31 +2,33 @@ import prisma from "../prismaInit.js";
 import { Router } from "express";
 const router = Router();
 
+//✅ Переписано під нову БД
 router.get("/muscleByGroup", async (req, res) => {
   try {
     const items = await prisma.muscleGroup.findMany({
       include: {
-        muscles: {
-          include: {
-            muscle: true,
-          },
-        },
+        translations: true,
+        muscles: { include: { muscle: { include: { translations: true } } } },
       },
-      orderBy: { nameUa: "asc" },
     });
+    console.dir(items, { depth: null });
+
     const result = items.map((g) => ({
       id: g.id,
-      nameEn: g.nameEn,
-      nameUa: g.nameUa,
       description: g.description,
-      muscles: (g.muscles || []).map((mt) => ({
-        id: mt.muscle.id,
-        nameEn: mt.muscle.nameEn,
-        nameUa: mt.muscle.nameUa,
-        description: mt.muscle.description,
+      translations: (g.translations || []).map((t) => ({
+        lang: t.lang,
+        name: t.name,
+      })),
+      muscles: (g.muscles || []).map((m) => ({
+        id: m.muscleId,
+        muscleName: m.muscle.description,
+        translations: (m.muscle.translations || []).map((t) => ({
+          lang: t.lang,
+          name: t.name,
+        })),
       })),
     }));
-
     res.json({ ok: true, result: result || [] });
   } catch (error) {
     console.error(error);
