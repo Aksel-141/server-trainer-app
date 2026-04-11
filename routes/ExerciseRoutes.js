@@ -429,6 +429,8 @@ router.post(
     }
   },
 );
+//✅ Переписано під нову БД
+// Редагувати вправу
 router.patch(
   "/:id",
   uploadMedia.fields([
@@ -442,14 +444,43 @@ router.patch(
 
       const item = await prisma.exercise.findUnique({
         where: { id: Number(id) },
-        include: { muscles: true, images: true, videos: true },
+        // Замість images: true, videos: true використовуємо media: true
+        include: { muscles: true, media: true },
       });
 
-      if (!item)
+      if (!item) {
         return res.status(404).json({
           ok: false,
           error: "Такого запису не знайдено",
         });
+      }
+
+      // Підготовка зв'язків для м'язів
+      let muscleConnections = undefined;
+      if (muscles) {
+        const parsedMuscles = JSON.parse(muscles);
+
+        // Оскільки nameEn тепер у перекладах, шукаємо м'язи через таблицю перекладів
+        const targetMuscles = await prisma.muscle.findMany({
+          where: {
+            translations: {
+              some: {
+                lang: "en",
+                name: { in: parsedMuscles },
+              },
+            },
+          },
+        });
+
+        muscleConnections = {
+          deleteMany: {}, // Видалити всі старі зв'язки
+          create: targetMuscles.map((m) => ({
+            muscle: {
+              connect: { id: m.id },
+            },
+          })),
+        };
+      }
 
       // Оновлення основних полів вправи
       await prisma.exercise.update({
@@ -457,25 +488,17 @@ router.patch(
         data: {
           title: title || item.title,
           description: description || item.description,
-          muscles: muscles
-            ? {
-                deleteMany: {}, // Видалити всі старі зв'язки
-                create: JSON.parse(muscles).map((item) => ({
-                  muscle: {
-                    connect: { nameEn: item },
-                  },
-                })),
-              }
-            : undefined,
+          muscles: muscleConnections,
         },
       });
 
       // Обробка зображень
       if (req.files.images) {
+        const imageMedia = item.media.filter((m) => m.type === "image");
         // Отримати поточну максимальну позицію
         const maxOrder =
-          item.images.length > 0
-            ? Math.max(...item.images.map((img) => img.order))
+          imageMedia.length > 0
+            ? Math.max(...imageMedia.map((img) => img.order || 0))
             : -1;
 
         let i = maxOrder + 1;
@@ -483,32 +506,43 @@ router.patch(
           const outputPath =
             "uploads/" + (title || item.title) + "_image_" + i + ".webp";
           await sharp(file.path).webp({ quality: 80 }).toFile(outputPath);
-          await prisma.exerciseImage.create({
+
+          // Створюємо запис у таблиці медіа з типом "image"
+          await prisma.exerciseMedia.create({
             data: {
               exerciseId: Number(id),
+              type: "image",
               path: "/" + outputPath,
               order: i,
             },
           });
-          fs.unlinkSync(file.path);
+
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
           i++;
         }
       }
 
       // Обробка відео
       if (req.files.video) {
+        const videoMedia = item.media.filter((m) => m.type === "video");
+
         // Видалити старе відео
-        for (const oldVideo of item.videos) {
+        for (const oldVideo of videoMedia) {
           const oldVideoPath = path.join(__dirname, "..", oldVideo.path);
           if (fs.existsSync(oldVideoPath)) fs.unlinkSync(oldVideoPath);
-          await prisma.exerciseVideo.delete({ where: { id: oldVideo.id } });
+
+          // Видаляємо запис з медіа
+          await prisma.exerciseMedia.delete({ where: { id: oldVideo.id } });
         }
 
         // Додати нове відео
         const videoUrl = "/uploads/" + req.files.video[0].filename;
-        await prisma.exerciseVideo.create({
+        await prisma.exerciseMedia.create({
           data: {
             exerciseId: Number(id),
+            type: "video",
             path: videoUrl,
           },
         });
@@ -516,7 +550,7 @@ router.patch(
 
       res.json({ ok: true });
     } catch (error) {
-      console.error(error);
+      console.error("Patch exercise error:", error);
       res.status(500).json({ error: "Something went wrong" });
     }
   },
