@@ -273,54 +273,93 @@ router.post("/import", async (req, res) => {
     });
   }
 });
-
+//✅ Переписано під нову БД
+// Отримати вправу за ID
 router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
+    const lang = req.query.lang || "uk";
+
     const item = await prisma.exercise.findUnique({
       where: { id: Number(id) },
       include: {
         muscles: {
           include: {
-            muscle: true, // отримуємо об'єкт Muscle з name
+            muscle: {
+              include: {
+                // Тут ми завантажуємо ВСІ переклади, адже фронтенд очікує і uk, і en у musclesInfo
+                translations: true,
+              },
+            },
           },
         },
-        images: {
+        media: {
           orderBy: {
             order: "asc",
           },
         },
-        videos: true,
       },
     });
 
-    if (!item)
+    if (!item) {
       return res.status(404).json({
         ok: false,
         error: "Такого запису не знайдено",
       });
+    }
+
+    const images = item.media.filter((m) => m.type === "image");
+    const videos = item.media.filter((m) => m.type === "video");
+
+    const meta =
+      typeof item.metadata === "object" && item.metadata !== null
+        ? item.metadata
+        : {};
+    const localizedTitle = meta[`title_${lang}`] || meta.title_uk || item.title;
+    const localizedDescription =
+      meta[`description_${lang}`] || meta.description_uk || item.description;
 
     const result = {
       id: item.id,
-      title: item.title,
-      description: item.description,
-      images: item.images.map((img) => ({
+      slug: item.slug,
+      title: localizedTitle,
+      description: localizedDescription,
+      type: item.type,
+
+      images: images.map((img) => ({
         id: img.id,
         path: img.path,
         order: img.order,
       })),
-      video: item.videos.length > 0 ? item.videos[0].path : null,
-      muscles: item.muscles.map((em) => em.muscle.nameEn),
-      musclesInfo: item.muscles.map((m) => ({
-        id: m.muscle.id,
-        nameUa: m.muscle.nameUa,
-        nameEn: m.muscle.nameEn,
-      })),
+
+      video: videos.length > 0 ? videos[0].path : null,
+
+      // Витягуємо лише англійські назви для простого масиву muscles
+      muscles: item.muscles.map((em) => {
+        const enTrans = em.muscle.translations.find((t) => t.lang === "en");
+        return enTrans ? enTrans.name : "Unknown";
+      }),
+
+      // Формуємо детальну інформацію про м'язи
+      musclesInfo: item.muscles.map((em) => {
+        const ukTrans = em.muscle.translations.find(
+          (t) => t.lang === "uk" || t.lang === "ua",
+        );
+        const enTrans = em.muscle.translations.find((t) => t.lang === "en");
+
+        return {
+          id: em.muscle.id,
+          nameUa: ukTrans ? ukTrans.name : "Без назви", // залишаємо nameUa як ключ для сумісності з фронтендом
+          nameEn: enTrans ? enTrans.name : "Unknown",
+        };
+      }),
+
       createdAt: item.createdAt,
     };
 
     res.json({ ok: true, result });
   } catch (error) {
+    console.error("Get exercise by id error:", error);
     res.status(500).json({
       ok: false,
       error: "Щось пішло не так на сервері",
