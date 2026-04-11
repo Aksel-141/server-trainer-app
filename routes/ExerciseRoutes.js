@@ -1,49 +1,85 @@
-// const prisma = require("../prismaInit");
-// const router = require("express").Router();
-// const sharp = require("sharp");
 import prisma from "../prismaInit.js";
-
 import sharp from "sharp";
 import path from "path";
 import fs from "fs";
-
-// const path = require("path");
-// const fs = require("fs");
-// const { uploadMedia } = require("../uploadMedia");
 import { uploadMedia } from "../uploadMedia.js";
-
 import { Router } from "express";
+
 const router = Router();
+
+//✅ Переписано під нову БД
+// Отримати всі вправи
 router.get("/all", async (req, res) => {
   try {
+    // Додаємо підтримку вибору мови (за замовчуванням 'uk')
+    const lang = req.query.lang || "uk";
+
     const items = await prisma.exercise.findMany({
       include: {
+        // ВИДАЛЕНО: translations для самої вправи (такої таблиці в схемі немає)
         muscles: {
           include: {
-            muscle: true, // отримуємо об'єкт Muscle з name
+            muscle: {
+              include: {
+                // Підтягуємо переклади м'язів для обраної мови (тут таблиця перекладів Є)
+                translations: {
+                  where: { lang: lang },
+                  select: { name: true },
+                },
+              },
+            },
           },
         },
-        images: {
+        // Запитуємо всі медіафайли вправи
+        media: {
           orderBy: {
             order: "asc",
           },
         },
-        videos: true,
       },
     });
 
-    const result = items.map((e) => ({
-      id: e.id,
-      title: e.title,
-      description: e.description,
-      images: e.images.map((img) => img.path),
-      video: e.videos.length > 0 ? e.videos[0].path : null,
-      muscles: e.muscles.map((em) => em.muscle.nameEn),
-      createdAt: e.createdAt,
-    }));
+    const result = items.map((e) => {
+      // Розподіляємо медіафайли на зображення та відео
+      const images = e.media.filter((m) => m.type === "image");
+      const videos = e.media.filter((m) => m.type === "video");
+
+      // Перевіряємо, чи є локалізація у полі metadata (якщо воно використовується як JSON-словник)
+      const meta =
+        typeof e.metadata === "object" && e.metadata !== null ? e.metadata : {};
+
+      // Намагаємось дістати український переклад з metadata, якщо його немає - беремо базове поле
+      const localizedTitle = meta[`title_${lang}`] || meta.title_uk || e.title;
+      const localizedDescription =
+        meta[`description_${lang}`] || meta.description_uk || e.description;
+
+      return {
+        id: e.id,
+        slug: e.slug,
+
+        title: localizedTitle,
+        description: localizedDescription,
+
+        type: e.type,
+
+        // Віддаємо масив шляхів для зображень
+        images: images.map((img) => img.path),
+
+        // Віддаємо шлях першого відео, якщо воно є
+        video: videos.length > 0 ? videos[0].path : null,
+
+        // Дістаємо назву м'яза з масиву перекладів
+        muscles: e.muscles.map(
+          (em) => em.muscle.translations?.[0]?.name || "Без назви",
+        ),
+
+        createdAt: e.createdAt,
+      };
+    });
+
     res.json({ ok: true, result });
   } catch (error) {
-    console.error(error);
+    console.error("Get all exercises error:", error);
     res.status(500).json({
       ok: false,
       error: "Щось пішло не так на сервері",
@@ -149,7 +185,7 @@ router.post("/import", async (req, res) => {
         // Безпечна обробка м'язів
         const muscles = Array.isArray(exerciseData.muscles)
           ? exerciseData.muscles.filter(
-              (m) => typeof m === "string" && m.trim()
+              (m) => typeof m === "string" && m.trim(),
             )
           : [];
 
@@ -352,7 +388,7 @@ router.post(
       console.error(error);
       res.status(500).json({ error: "Something went wrong" });
     }
-  }
+  },
 );
 router.patch(
   "/:id",
@@ -444,7 +480,7 @@ router.patch(
       console.error(error);
       res.status(500).json({ error: "Something went wrong" });
     }
-  }
+  },
 );
 
 router.delete("/:id", async (req, res) => {
