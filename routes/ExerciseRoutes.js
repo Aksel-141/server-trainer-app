@@ -273,6 +273,7 @@ router.post("/import", async (req, res) => {
     });
   }
 });
+
 //✅ Переписано під нову БД
 // Отримати вправу за ID
 router.get("/:id", async (req, res) => {
@@ -367,6 +368,8 @@ router.get("/:id", async (req, res) => {
   }
 });
 
+//✅ Переписано під нову БД
+// Створити нову вправу
 router.post(
   "/create",
   uploadMedia.fields([
@@ -376,59 +379,95 @@ router.post(
   async (req, res) => {
     try {
       const { title, description, muscles } = req.body;
-      //Збереження файлів в папку і отримання url
-      console.log(req.body);
+      console.log("Create exercise body:", req.body);
 
-      const exercise = await prisma.exercise.create({
-        data: {
-          title: title,
-          description: description,
-          muscles: {
-            create: JSON.parse(muscles)?.map((item) => ({
-              muscle: {
-                connect: { nameEn: item },
+      // 1. Підготовка зв'язків для м'язів
+      let muscleConnections = [];
+      if (muscles) {
+        const parsedMuscles = JSON.parse(muscles);
+
+        // Шукаємо м'язи через таблицю перекладів (англійською), як і при PATCH
+        const targetMuscles = await prisma.muscle.findMany({
+          where: {
+            translations: {
+              some: {
+                lang: "en",
+                name: { in: parsedMuscles },
               },
-            })),
+            },
           },
-        },
-      });
+        });
 
-      // Збереження зображень
+        muscleConnections = targetMuscles.map((m) => ({
+          muscle: {
+            connect: { id: m.id },
+          },
+        }));
+      }
+
+      // 2. Обробка файлів та підготовка масиву медіа
+      const mediaData = [];
+
+      // Безпечна назва для файлів (видаляємо спецсимволи, щоб не зламати файлову систему)
+      const safeTitle = title
+        ? title.replace(/[^a-z0-9а-яіїєґ]/gi, "_")
+        : "exercise";
+
       if (req.files.images) {
         let i = 0;
         for (const file of req.files.images) {
-          const outputPath = "uploads/" + title + "_image_" + i + ".webp";
+          // Додаємо timestamp, щоб уникнути конфліктів імен
+          const outputPath =
+            "uploads/" + safeTitle + "_" + Date.now() + "_image_" + i + ".webp";
           await sharp(file.path).webp({ quality: 80 }).toFile(outputPath);
-          await prisma.exerciseImage.create({
-            data: {
-              exerciseId: exercise.id,
-              path: "/" + outputPath,
-              order: i,
-            },
+
+          mediaData.push({
+            type: "image",
+            path: "/" + outputPath,
+            order: i,
           });
-          fs.unlinkSync(file.path);
+
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+          }
           i++;
         }
       }
 
-      // Збереження відео
       if (req.files.video) {
         const videoUrl = "/uploads/" + req.files.video[0].filename;
-        await prisma.exerciseVideo.create({
-          data: {
-            exerciseId: exercise.id,
-            path: videoUrl,
-          },
+        mediaData.push({
+          type: "video",
+          path: videoUrl,
         });
       }
 
-      res.json({ ok: true });
+      // 3. Генерація унікального slug (оскільки він обов'язковий в схемі)
+      const generatedSlug = "exercise-" + Date.now();
+
+      // 4. Створення вправи разом з м'язами та медіа одним запитом!
+      const exercise = await prisma.exercise.create({
+        data: {
+          slug: generatedSlug,
+          title: title,
+          description: description,
+          muscles: {
+            create: muscleConnections,
+          },
+          media: {
+            create: mediaData,
+          },
+        },
+      });
+
+      res.json({ ok: true, id: exercise.id });
     } catch (error) {
-      console.error(error);
+      console.error("Create exercise error:", error);
       res.status(500).json({ error: "Something went wrong" });
     }
   },
 );
+
 //✅ Переписано під нову БД
 // Редагувати вправу
 router.patch(
