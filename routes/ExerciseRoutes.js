@@ -2,8 +2,13 @@ import prisma from "../prismaInit.js";
 import sharp from "sharp";
 import path from "path";
 import fs from "fs";
+import { fileURLToPath } from "url";
 import { uploadMedia } from "../uploadMedia.js";
 import { Router } from "express";
+
+// Допоміжні константи для роботи зі шляхами в ES Modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const router = Router();
 
@@ -595,6 +600,8 @@ router.patch(
   },
 );
 
+//✅ Переписано під нову БД
+// Видалити вправу
 router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
@@ -602,32 +609,27 @@ router.delete("/:id", async (req, res) => {
     // Отримати всі медіа файли перед видаленням
     const exercise = await prisma.exercise.findUnique({
       where: { id: Number(id) },
-      include: { images: true, videos: true },
+      // Запитуємо всі медіа (і зображення, і відео) з нової таблиці
+      include: { media: true },
     });
 
     if (exercise) {
-      // Видалити файли зображень
-      for (const image of exercise.images) {
-        const imagePath = path.join(__dirname, "..", image.path);
-        if (fs.existsSync(imagePath)) fs.unlinkSync(imagePath);
-      }
-
-      // Видалити файли відео
-      for (const video of exercise.videos) {
-        const videoPath = path.join(__dirname, "..", video.path);
-        if (fs.existsSync(videoPath)) fs.unlinkSync(videoPath);
+      // Видалити всі фізичні медіафайли, прив'язані до цієї вправи
+      for (const item of exercise.media) {
+        const filePath = path.join(__dirname, "..", item.path);
+        if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
       }
     }
 
-    // Видалити вправу (каскадне видалення медіа записів з БД)
+    // Видалити саму вправу (завдяки onDelete: Cascade медіа записи в БД також видаляться автоматично)
     await prisma.exercise.delete({
       where: { id: Number(id) },
     });
 
-    console.log(id);
+    console.log("Deleted exercise ID:", id);
     res.json({ ok: true });
   } catch (error) {
-    console.error(error);
+    console.error("Delete exercise error:", error);
     res.status(500).json({
       ok: false,
       error: "Щось пішло не так на сервері",
@@ -635,37 +637,38 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
-// Видалити окреме зображення
+//✅ Переписано під нову БД
+// Видалити окреме зображення (або відео)
 router.delete("/:exerciseId/image/:imageId", async (req, res) => {
   try {
     const { imageId } = req.params;
 
-    // Знайти зображення
-    const image = await prisma.exerciseImage.findUnique({
+    // Знайти медіа файл
+    const mediaItem = await prisma.exerciseMedia.findUnique({
       where: { id: Number(imageId) },
     });
 
-    if (!image) {
+    if (!mediaItem) {
       return res.status(404).json({
         ok: false,
-        error: "Зображення не знайдено",
+        error: "Медіафайл не знайдено",
       });
     }
 
-    // Видалити файл
-    const imagePath = path.join(__dirname, "..", image.path);
-    if (fs.existsSync(imagePath)) {
-      fs.unlinkSync(imagePath);
+    // Видалити фізичний файл з диска
+    const filePath = path.join(__dirname, "..", mediaItem.path);
+    if (fs.existsSync(filePath)) {
+      fs.unlinkSync(filePath);
     }
 
-    // Видалити запис з БД
-    await prisma.exerciseImage.delete({
+    // Видалити запис про медіафайл з БД
+    await prisma.exerciseMedia.delete({
       where: { id: Number(imageId) },
     });
 
     res.json({ ok: true });
   } catch (error) {
-    console.error(error);
+    console.error("Delete media item error:", error);
     res.status(500).json({
       ok: false,
       error: "Щось пішло не так на сервері",
