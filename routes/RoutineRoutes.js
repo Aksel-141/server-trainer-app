@@ -13,11 +13,22 @@ router.post("/create", async (req, res) => {
       categoryIds,
       routineExercises,
     });
+    // ensure we provide a slug (Prisma schema requires it)
+    const rawSlug = title
+      ? title
+          .toString()
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/(^-|-$)/g, "")
+      : `routine`;
+    const slug = `${rawSlug}-${Date.now()}`;
 
     const routine = await prisma.routine.create({
       data: {
         title,
         description,
+        slug,
         // Прив'язка до категорій через проміжну таблицю
         categories: {
           create: (categoryIds || []).map((categoryId) => ({
@@ -196,8 +207,11 @@ router.get("/:id", async (req, res) => {
     const lang = req.query.lang || "uk";
     console.log("Get routine by ID:", id);
 
+    // support both numeric id and slug lookups
+    const lookup = isNaN(Number(id)) ? { slug: id } : { id: Number(id) };
+
     const item = await prisma.routine.findUnique({
-      where: { id: Number(id) },
+      where: lookup,
       include: {
         categories: {
           include: {
