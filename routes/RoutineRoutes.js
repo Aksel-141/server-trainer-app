@@ -1,5 +1,5 @@
 import { Router } from "express";
-
+import prisma from "../prismaInit.js";
 const router = Router();
 
 //✅ Переписано під нову БД
@@ -84,7 +84,7 @@ router.post("/create", async (req, res) => {
 
 //✅ Переписано під нову БД
 // Отримання всіх рутин
-router.get("/api/routine", async (req, res) => {
+router.get("/", async (req, res) => {
   try {
     const lang = req.query.lang || "uk";
 
@@ -190,7 +190,7 @@ router.get("/api/routine", async (req, res) => {
 
 //✅ Переписано під нову БД
 // Отримання рутини за ID
-router.get("/api/routine/:id", async (req, res) => {
+router.get("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const lang = req.query.lang || "uk";
@@ -301,7 +301,7 @@ router.get("/api/routine/:id", async (req, res) => {
 
 //✅ Переписано під нову БД
 // Видалення рутини
-router.delete("/api/routine/:id", async (req, res) => {
+router.delete("/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -322,7 +322,7 @@ router.delete("/api/routine/:id", async (req, res) => {
 
 //✅ Переписано під нову БД
 // Оновлення рутини
-router.patch("/api/routine/:id", async (req, res) => {
+router.patch("/:id", async (req, res) => {
   try {
     const { id } = req.params;
     const { title, description, categoryIds, routineExercises } = req.body;
