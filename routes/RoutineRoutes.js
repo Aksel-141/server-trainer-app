@@ -40,10 +40,22 @@ router.post("/create", async (req, res) => {
           create: (routineExercises || []).map((ex, index) => ({
             exerciseId: Number(ex.exerciseId),
             order: index + 1,
-            reps: ex.reps ? Number(ex.reps) : null,
-            sets: ex.sets ? Number(ex.sets) : null,
-            duration: ex.duration ? Number(ex.duration) : null,
-            rest: ex.rest ? Number(ex.rest) : null,
+            reps:
+              ex.reps !== undefined && ex.reps !== null
+                ? Number(ex.reps)
+                : null,
+            sets:
+              ex.sets !== undefined && ex.sets !== null
+                ? Number(ex.sets)
+                : null,
+            duration:
+              ex.duration !== undefined && ex.duration !== null
+                ? Number(ex.duration)
+                : null,
+            rest:
+              ex.rest !== undefined && ex.rest !== null
+                ? Number(ex.rest)
+                : null,
           })),
         },
       },
@@ -367,10 +379,22 @@ router.patch("/:id", async (req, res) => {
           create: (routineExercises || []).map((ex, index) => ({
             exerciseId: Number(ex.exerciseId),
             order: index + 1,
-            reps: ex.reps ? Number(ex.reps) : null,
-            sets: ex.sets ? Number(ex.sets) : null,
-            duration: ex.duration ? Number(ex.duration) : null,
-            rest: ex.rest ? Number(ex.rest) : null,
+            reps:
+              ex.reps !== undefined && ex.reps !== null
+                ? Number(ex.reps)
+                : null,
+            sets:
+              ex.sets !== undefined && ex.sets !== null
+                ? Number(ex.sets)
+                : null,
+            duration:
+              ex.duration !== undefined && ex.duration !== null
+                ? Number(ex.duration)
+                : null,
+            rest:
+              ex.rest !== undefined && ex.rest !== null
+                ? Number(ex.rest)
+                : null,
           })),
         },
       },
